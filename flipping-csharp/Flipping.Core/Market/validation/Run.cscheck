@@ -1,0 +1,13 @@
+using OsrsFlipping.Core;
+using System.Text.Json.Nodes;
+if(args.Length>0 && args[0]=="--parity")
+{
+    var result=MarketParity.Run(args[1]);
+    if(args.Length>2)File.WriteAllText(args[2],result.ToJsonString(J.Options));
+    Console.WriteLine(result.ToJsonString(J.Options));
+    return result.L("failed")>0?1:0;
+}
+var config = args.Length > 0 ? JsonNode.Parse(File.ReadAllText(args[0])) as JsonObject : null;
+Console.WriteLine(MarketRegressionChecks.Run(config).ToJsonString(J.Options));
+Console.WriteLine((await MarketRegressionChecks.RunApiChecksAsync(config)).ToJsonString(J.Options));
+return 0;

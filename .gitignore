@@ -1,0 +1,28 @@
+**/bin/
+**/obj/
+**/.gradle/
+**/build/classes/
+**/build/tmp/
+**/build/reports/
+**/build/test-results/
+.vs/
+.idea/
+*.user
+*.suo
+
+# Runtime/account data
+live-state.json
+runtime-status.json
+position-journal.json
+margin-journal.json
+live-collection-receipts.json
+trades.sqlite3*
+bank-pin.protected.json
+input-command.json
+input-receipt.json
+operator-*.json
+*.log
+
+# Published executables and archives
+*.exe
+*.zip

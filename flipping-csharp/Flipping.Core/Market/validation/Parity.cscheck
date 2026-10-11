@@ -1,0 +1,66 @@
+using System.Text.Json.Nodes;
+using OsrsFlipping.Core;
+
+internal static class MarketParity
+{
+    internal static JsonObject Run(string fixturePath)
+    {
+        var fixtures = JsonNode.Parse(File.ReadAllText(fixturePath))!.AsArray(); var mismatches = new JsonArray(); var ops = new Dictionary<string,int>(); var failed = new HashSet<int>();
+        for (var index = 0; index < fixtures.Count; index++)
+        {
+            var fixture = fixtures[index]!.AsObject(); var input = fixture.Obj("inputs"); var op = fixture.S("op"); ops[op] = ops.GetValueOrDefault(op) + 1;
+            try
+            {
+                var config = input.Obj("config"); var portfolio = Portfolio(input.Obj("portfolio"));
+                JsonNode? actual = op switch
+                {
+                    "tax" => JsonValue.Create(MarketAnalyzer.Tax(input.L("price"), input.I("item_id"), config)),
+                    "screen" => MarketAnalyzer.Screen(input.Obj("data"),config,input.L("now")),
+                    "chart" => Strategy.ChartContext(input.Objects("points"),input.L("now"),input.I("item_id"),config),
+                    "evaluate" => Strategy.Evaluate(input.Obj("candidate"),input["context"] as JsonObject,config),
+                    "allocation" => Allocation(config,portfolio),
+                    "funded" => Strategy.FundedEconomics(input.Obj("candidate"),config,portfolio),
+                    "testplan" => TestPlan(input.Obj("candidate"),config,portfolio),
+                    "decisions" => Decisions(input.Obj("report"),config,portfolio,input.L("now")),
+                    "adapt" => Adaptation.AdaptReport(input.Obj("report"),input.Objects("outcomes"),config),
+                    "verified" => MarketAnalyzer.VerifiedCandidate(input.Obj("candidate"),input["result"] as JsonObject,config,input.L("now")),
+                    _ => throw new InvalidDataException("Unknown parity op")
+                };
+                Compare(fixture["expected"],actual,"$",(path,e,a)=> {failed.Add(index); if(mismatches.Count<100)mismatches.Add(J.O(("case",index),("op",op),("path",path),("expected",e),("actual",a)));});
+            }
+            catch(Exception ex) {failed.Add(index);mismatches.Add(J.O(("case",index),("op",op),("error",ex.ToString())));}
+        }
+        return J.O(("cases",fixtures.Count),("passed",fixtures.Count-failed.Count),("failed",failed.Count),("operations",System.Text.Json.JsonSerializer.SerializeToNode(ops)),("mismatches",mismatches));
+    }
+    static JsonArray Allocation(JsonObject config,Portfolio p) {var (cap,cash)=Strategy.AllocationLimits(config,p);return J.A(cap,cash);}
+    static JsonArray TestPlan(JsonObject c,JsonObject config,Portfolio p) {var (q,profit)=Strategy.TestPositionPlan(c,config,p);return J.A(q,profit);}
+    static JsonObject Decisions(JsonObject report,JsonObject config,Portfolio p,long now){var (rows,diag)=DecisionEngine.Decisions(report,config,p,now);return J.O(("rows",rows),("diagnostics",diag));}
+    static Portfolio Portfolio(JsonObject input)
+    {
+        var p=new Portfolio{Verified=input.B("verified"),ObservedAt=input.L("observed_at"),FreeCashGp=input.L("free_cash_gp"),BuyLimitsVerified=input.B("buy_limits_verified"),SlotCapacity=input.I("slot_capacity",3),Members=input["members"] is null?null:input.B("members"),DeployedCostGp=input.L("deployed_cost_gp")};
+        p.Offers=input.Objects("offers").Select(o=>new Offer(o.I("slot"),o.I("item_id"),o.S("item_name"),o.S("side"),o.L("price"),o.L("quantity"),o.L("filled"),o.L("opened_at"),o["last_progress_at"] is null?null:o.L("last_progress_at"))).ToList();
+        foreach(var pair in input.Obj("bought_last_4h"))p.BoughtLast4h[int.Parse(pair.Key)]=pair.Value.L();
+        foreach(var pair in input.Obj("bought_by_limit_group"))p.BoughtByLimitGroup[pair.Key]=pair.Value.L();
+        return p;
+    }
+    static void Compare(JsonNode? expected,JsonNode? actual,string path,Action<string,JsonNode?,JsonNode?> fail)
+    {
+        if(expected is null||actual is null){if(expected is not null||actual is not null)fail(path,expected,actual);return;}
+        if(expected is JsonObject eo&&actual is JsonObject ao)
+        {
+            foreach(var key in eo.Select(p=>p.Key).Union(ao.Select(p=>p.Key)))
+                if(!eo.ContainsKey(key)||!ao.ContainsKey(key))fail(path+"."+key,eo[key],ao[key]);else Compare(eo[key],ao[key],path+"."+key,fail);
+            return;
+        }
+        if(expected is JsonArray ea&&actual is JsonArray aa)
+        {
+            if(ea.Count!=aa.Count){fail(path+".length",JsonValue.Create(ea.Count),JsonValue.Create(aa.Count));return;}
+            for(var i=0;i<ea.Count;i++)Compare(ea[i],aa[i],path+"["+i+"]",fail);return;
+        }
+        if(expected.GetValueKind()==System.Text.Json.JsonValueKind.Number&&actual.GetValueKind()==System.Text.Json.JsonValueKind.Number)
+        {
+            var e=expected.D();var a=actual.D();if(Math.Abs(e-a)>Math.Max(.000001,Math.Abs(e)*1e-10))fail(path,expected,actual);return;
+        }
+        if(expected.ToJsonString()!=actual.ToJsonString())fail(path,expected,actual);
+    }
+}

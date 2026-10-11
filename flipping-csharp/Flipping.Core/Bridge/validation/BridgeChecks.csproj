@@ -1,0 +1,10 @@
+<Project>
+  <PropertyGroup><BaseIntermediateOutputPath>../../../../../work/csharp-bridge-checks/obj/</BaseIntermediateOutputPath><MSBuildProjectExtensionsPath>../../../../../work/csharp-bridge-checks/obj/</MSBuildProjectExtensionsPath></PropertyGroup>
+  <Import Project="Sdk.props" Sdk="Microsoft.NET.Sdk"/>
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework><OutputType>Exe</OutputType><ImplicitUsings>enable</ImplicitUsings><Nullable>enable</Nullable><EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <OutputPath>../../../../../work/csharp-bridge-checks/bin/</OutputPath>
+  </PropertyGroup>
+  <ItemGroup><ProjectReference Include="../../Flipping.Core.csproj"/><Compile Include="Run.cscheck"/></ItemGroup>
+  <Import Project="Sdk.targets" Sdk="Microsoft.NET.Sdk"/>
+</Project>

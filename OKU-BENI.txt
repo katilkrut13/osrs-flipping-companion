@@ -1,0 +1,14 @@
+OSRS FLIPPING BOT - TEMIZ PAYLASIM PAKETI
+
+1. ZIP dosyasini tamamen bir klasore cikartin.
+2. RuneLite ve Java aciksa kapatin.
+3. KURULUM.bat dosyasina cift tiklayin.
+4. Jagex Launcher ile RuneLite'i acin ve Grand Exchange ekranina gelin.
+5. Masaustundeki Flipping-Bot.exe dosyasini acin.
+
+Kurulum mevcut RuneLite config.json dosyasinin tarihli yedegini olusturur.
+Her bilgisayarda yeni ve bos bir LocalAppData\OsrsFlipping veri klasoru kullanilir.
+Bu pakette hesap kimligi, islem gecmisi, PIN veya canli kayit yoktur.
+Python veya ayrica .NET kurulumu gerekmez. Windows x64 icindir.
+
+Oyun otomasyonu hesap yaptirimi riski tasiyabilir. Kullanici kendi hesabindan ve kullanimindan sorumludur.

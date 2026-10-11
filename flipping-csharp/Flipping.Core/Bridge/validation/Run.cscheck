@@ -1,0 +1,4 @@
+using OsrsFlipping.Core;
+using System.Text.Json.Nodes;
+var config = args.Length > 0 ? JsonNode.Parse(File.ReadAllText(args[0])) as JsonObject : null;
+Console.WriteLine(BridgeRegressionChecks.Run(config).ToJsonString(J.Options));

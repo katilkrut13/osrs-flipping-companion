@@ -1,0 +1,26 @@
+plugins { id 'java' }
+repositories {
+    maven { url = 'https://repo.runelite.net'; content { includeGroupByRegex('net\\.runelite.*') } }
+    mavenCentral()
+}
+dependencies {
+    implementation 'net.runelite:client:1.13.1'
+}
+tasks.withType(JavaCompile).configureEach { options.encoding = 'UTF-8'; options.release.set(11) }
+tasks.register('run', JavaExec) {
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'local.flip.BridgeMain'
+    args '--developer-mode'
+    jvmArgs '-ea'
+    systemProperty 'flip.directory', projectDir.parentFile.absolutePath
+    systemProperty 'flip.allowInput', project.findProperty('allowInput') ?: 'false'
+}
+tasks.register('bundle', Jar) {
+    dependsOn configurations.runtimeClasspath
+    archiveFileName = 'flip-bridge.next.jar'
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    manifest { attributes('Main-Class': 'local.flip.BridgeMain', 'Multi-Release': 'true') }
+    from sourceSets.main.output
+    from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
+    exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA', '**/module-info.class'
+}
