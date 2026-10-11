@@ -359,6 +359,18 @@ public sealed class MarginRunner
             else if (receipt["offer"]?["filled"].L() == 0 && count == before + 1) t["stage"] = "PAUSED_HELD"; else return false;
             t.Remove("user_interrupted_submission"); ClearManualReview(); Reason = ""; Save(); return true;
         }
+        if (stage is "WAIT_BUY" or "WAIT_SELL" && !hasOffer && count == before + 1 && t.L("buy_spent") > 0)
+        {
+            // No exact receipt exists, but the one-item probe is still fully owned.
+            // Exact stock plus its recorded cost proves the buy; a missing sale with
+            // the same item proves that no proceeds should be claimed.
+            t["automatic_recovery_evidence"] = J.O(("status", stage == "WAIT_BUY"
+                    ? "MARGIN_BUY_EXACT_STOCK_AND_COST" : "MARGIN_SALE_RETURNED_EXACT_STOCK"),
+                ("item_id", id), ("quantity", 1), ("buy_spent_gp", t.L("buy_spent")),
+                ("observed_at", state.L("observed_at")));
+            t["slot"] = null; t["stage"] = "BUY_COLLECTING"; t["recovery_stage"] = "BUY_COLLECTING";
+            t.Remove("user_interrupted_submission"); ClearManualReview(); Reason = ""; Save(); return true;
+        }
         if (stage == "BUY_COLLECTING" && !hasOffer && count == before + 1 && t["buy_spent"].L() > 0) { t["stage"] = "BUY_COLLECTING"; ClearManualReview(); Reason = ""; Save(); return true; }
         if (stage == "SELL_COLLECTING" && !hasOffer && t["expected_sale_gp"] != null && count == before)
         {

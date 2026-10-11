@@ -56,6 +56,13 @@ public static class ManualMarginRegressionChecks
             && sellCancelR.Test.L("buy_spent") == 120 && sellCancelR.Test!["result"] is null,
             "manual sale cancellation preserves held item without fabricated sale");
 
+        var (returnedSaleE, returnedSaleR, returnedSaleS) = Sell();
+        returnedSaleE.Offers.Remove(returnedSaleS); returnedSaleE.Inventory[1] = 1;
+        returnedSaleR.ReviewManualChanges(returnedSaleE.Observe());
+        Check(returnedSaleR.Test!.S("stage") == "BUY_COLLECTING" && returnedSaleR.Test!["result"] is null
+            && returnedSaleR.Test.Obj("automatic_recovery_evidence").S("status") == "MARGIN_SALE_RETURNED_EXACT_STOCK",
+            "missing margin sale with exact returned stock retries without invented proceeds");
+
         var (missingE, missingR, missingS) = Buy(); var missingOffer = missingE.Offers[missingS].Copy();
         missingE.Offers.Remove(missingS); missingR.ReviewManualChanges(missingE.Observe());
         Check(missingR.Test!.S("stage") == "STOPPED" && missingR.Test.S("recovery_stage") == "WAIT_BUY"
@@ -70,6 +77,13 @@ public static class ManualMarginRegressionChecks
             "return of exact known offer resumes margin wait");
         Check(missingR.Test["buy_limit_review_recorded"] is null,
             "restoring exact offer clears old buy-limit invalidation marker for future review");
+
+        var (ownedBuyE, ownedBuyR, ownedBuyS) = Buy(); ownedBuyE.Offers.Remove(ownedBuyS);
+        ownedBuyE.Inventory[1] = 1; ownedBuyR.Test!["buy_spent"] = 120;
+        ownedBuyR.ReviewManualChanges(ownedBuyE.Observe());
+        Check(ownedBuyR.Test.S("stage") == "BUY_COLLECTING" && ownedBuyR.Test["manual_review"] is null
+            && ownedBuyR.Test.Obj("automatic_recovery_evidence").S("status") == "MARGIN_BUY_EXACT_STOCK_AND_COST",
+            "missing margin buy with exact owned unit and recorded cost resumes automatically");
 
         var (changedE, changedR, changedS) = Buy(); changedE.Offers[changedS]["price"] = 121;
         Check(!changedR.Step(changedE.Observe()) && changedR.Test!.S("stage") == "STOPPED"
